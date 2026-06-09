@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0a1612"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" type="image/png" href="icon-192.png"/>
+<title>HeatSeeker Matrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0a1612;
+  --panel: #1a1a1a;
+  --border: #2a2a2a;
+  --border2: #333;
+  --text: #e8e8e8;
+  --text2: #999;
+  --text3: #666;
+  --teal: #2eb6c8;
+  --green: #00ff88;
+  --red: #ff3333;
+  --yellow: #ffe033;
+  --amber: #ffaa00;
+  --cyan: #00eeff;
+  --bebas: 'Bebas Neue', sans-serif;
+  --mono: 'Share Tech Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+/* Top setup bar */
+.topbar {
+  background: rgba(0,0,0,0.4);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.topbar label { font-size: 13px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+.topbar input[type=text], .topbar input[type=password] {
+  background: var(--panel); border: 1px solid var(--border2); border-radius: 4px;
+  padding: 8px 12px; color: var(--text); font-family: var(--mono); font-size: 15px; outline: none;
+}
+.topbar input[type=text] { width: 110px; text-transform: uppercase; font-weight: 700; }
+.topbar input[type=password] { flex: 1; min-width: 200px; }
+.topbar input:focus { border-color: var(--teal); }
+.topbar select {
+  background: var(--panel); border: 1px solid var(--border2); border-radius: 4px;
+  padding: 8px 12px; color: var(--text); font-family: var(--mono); font-size: 15px;
+  outline: none; cursor: pointer;
+}
+.btn {
+  padding: 8px 18px; border-radius: 4px; font-family: var(--mono);
+  font-size: 14px; font-weight: 700; cursor: pointer; border: 1px solid;
+  transition: 0.15s; background: transparent;
+}
+.btn.primary { background: var(--teal); color: #000; border-color: var(--teal); }
+.btn.primary:hover { background: #3acedf; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.status {
+  margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--text2);
+}
+
+/* Matrix */
+.matrix-wrap {
+  height: calc(100vh - 125px);
+  overflow: auto;
+}
+.matrix-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+.matrix-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+.matrix-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 16px; }
+.matrix-table th, .matrix-table td {
+  padding: 10px 14px; text-align: right; border: 1px solid rgba(255,255,255,0.04);
+  white-space: nowrap; min-width: 120px;
+}
+.matrix-table th {
+  position: sticky; top: 0; background: #0d0d0d; z-index: 10;
+  color: var(--text3); font-size: 14px; border-bottom: 1px solid var(--border2); font-weight: 600;
+}
+.matrix-table td.strike-col {
+  position: sticky; left: 0; background: #0d0d0d; z-index: 5;
+  font-weight: 700; color: var(--text); text-align: left;
+  min-width: 80px; border-right: 1px solid var(--border2); font-size: 16px;
+}
+.king-node { box-shadow: inset 0 0 0 2px var(--red); position: relative; }
+.king-node::after { content: '★'; color: var(--red); margin-left: 4px; font-size: 14px; }
+
+/* Current spot price marker — Skylit-style white pill wrapping the ATM strike */
+.atm-pill {
+  display: inline-block;
+  background: #fff;
+  color: #000;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 14px;
+  letter-spacing: 0.3px;
+  font-size: 15px;
+  box-shadow: 0 0 8px rgba(255,255,255,0.4);
+}
+.empty-msg {
+  padding: 60px 20px; text-align: center; font-family: var(--mono);
+  color: var(--text3); font-size: 14px; line-height: 1.7;
+}
+
+/* Bottom toolbar */
+.bottombar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+  padding: 10px 14px; display: flex; gap: 10px; align-items: center; height: 56px;
+}
+.ticker-display {
+  font-family: var(--mono); font-size: 14px; color: var(--text);
+  font-weight: 700; letter-spacing: 0.5px;
+  display: flex; align-items: baseline; gap: 10px;
+}
+.ticker-display .symbol {
+  font-family: var(--bebas);
+  font-size: 32px;
+  color: var(--red);
+  letter-spacing: 1.5px;
+  line-height: 1;
+}
+.ticker-display .price { font-size: 18px; color: var(--text); }
+.ticker-display .change { font-size: 14px; }
+.ticker-display .change.pos { color: var(--green); }
+.ticker-display .change.neg { color: var(--red); }
+
+/* Local clock — matches main dashboard subheader styling */
+.local-time {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--mono); margin-right: 6px;
+}
+.local-time-lbl {
+  font-size: 11px; color: var(--text3);
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.local-time-val {
+  font-size: 18px; color: var(--cyan);
+  font-weight: 700; letter-spacing: 0.5px;
+}
+.spacer { flex: 1; }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--amber);
+  border: none; color: #000; cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+}
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.mode-tag {
+  background: var(--teal); color: #000; padding: 8px 16px;
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  border-radius: 6px; letter-spacing: 0.5px;
+}
+
+@media (max-width: 600px) {
+  .topbar { font-size: 12px; }
+  .topbar input[type=password] { min-width: 0; }
+  .matrix-table th, .matrix-table td { padding: 6px 8px; font-size: 12px; min-width: 80px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <label>API KEY:</label>
+  <input type="password" id="api-key" placeholder="Paste UW token..." autocomplete="off"/>
+  <label>TICKER:</label>
+  <input type="text" id="ticker" value="SPY" maxlength="6" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')loadMatrix()"/>
+  <label>EXPIRATIONS:</label>
+  <select id="expiry-count">
+    <option value="5" selected>5</option>
+    <option value="10">10</option>
+  </select>
+  <label>STRIKES:</label>
+  <select id="strike-count" onchange="onStrikeCountChange()">
+    <option value="50">50</option>
+    <option value="80" selected>80</option>
+    <option value="120">120</option>
+    <option value="200">200</option>
+    <option value="9999">All</option>
+  </select>
+  <button class="btn primary" id="btn-load" onclick="loadMatrix()">⚡ LOAD</button>
+  <span class="status" id="status">Ready · open browser DevTools (F12) Console to see fetch debug</span>
+</div>
+
+<div class="matrix-wrap" id="matrix-wrap">
+  <div class="empty-msg" id="empty-msg">
+    Paste your Unusual Whales API key, enter a ticker, click <strong>LOAD</strong>.<br>
+    <span style="font-size:12px;opacity:0.6;">Open browser DevTools Console (F12) to see what UW returns for each expiration.</span>
+  </div>
+  <table class="matrix-table" id="matrix" style="display:none;">
+    <thead><tr id="matrix-head"></tr></thead>
+    <tbody id="matrix-body"></tbody>
+  </table>
+</div>
+
+<div class="bottombar">
+  <div class="ticker-display" id="ticker-display">
+    <span class="symbol">—</span>
+    <span class="price">—</span>
+    <span class="change">—</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="local-time">
+    <span class="local-time-lbl">LOCAL TIME</span>
+    <span class="local-time-val" id="live-clock">--:--:--</span>
+  </div>
+  <button class="icon-btn" id="btn-refresh" onclick="loadMatrix()" title="Refresh">⚡</button>
+  <div class="mode-tag">⚡ GEX</div>
+</div>
+
+<script>
+// ────────────────────────────────────────────
+// STATE & CONSTANTS
+// ────────────────────────────────────────────
+const UW_BASE = 'https://api.unusualwhales.com';
+const INCLUDE_0DTE = true;
+
+const TICKER_PATTERN = {
+  'SPY':'daily','QQQ':'daily','IWM':'daily','DIA':'daily',
+  'SPX':'daily','XSP':'daily','NDX':'daily','RUT':'daily',
+  'AAPL':'mwf','MSFT':'mwf','NVDA':'mwf','AMZN':'mwf','GOOGL':'mwf','GOOG':'mwf',
+  'META':'mwf','TSLA':'mwf','NFLX':'mwf','AVGO':'mwf'
+};
+const US_HOLIDAYS = new Set([
+  '2026-01-01','2026-01-19','2026-02-16','2026-04-03','2026-05-25',
+  '2026-06-19','2026-07-03','2026-09-07','2026-11-26','2026-12-25'
+]);
+const HOLIDAY_ROLLBACK = { '2026-04-03':'2026-04-02','2026-06-19':'2026-06-18' };
+
+let dataCache = {};
+let lastSpot = null;
+let lastTicker = '';
+let lastExpiries = [];
+
+// Restore saved key + ticker + strike count
+(function restoreSaved() {
+  try {
+    const k = localStorage.getItem('hs_uw_key');
+    if (k) document.getElementById('api-key').value = k;
+    const t = localStorage.getItem('hs_last_ticker');
+    if (t) document.getElementById('ticker').value = t;
+    const sc = localStorage.getItem('hs_strike_count');
+    if (sc) {
+      const sel = document.getElementById('strike-count');
+      for (const opt of sel.options) if (opt.value === sc) { opt.selected = true; break; }
+    }
+  } catch(e) {}
+})();
+
+// ────────────────────────────────────────────
+// UTILITIES
+// ────────────────────────────────────────────
+const fnumK = v => {
+  if (v == null || isNaN(v)) return '$0';
+  const a = Math.abs(v), s = v < 0 ? '-' : '';
+  if (a === 0) return '$0';
+  if (a >= 1e6) return s + '$' + (a/1e6).toFixed(2) + 'M';
+  if (a >= 10000) return s + '$' + (a/1000).toFixed(1) + 'K';
+  if (a >= 1000) return s + '$' + (a/1000).toFixed(2) + 'K';
+  if (a >= 100) return s + '$' + Math.round(a);
+  if (a >= 1) return s + '$' + a.toFixed(1);
+  return s + '$' + a.toFixed(2);
+};
+const setStatus = (msg, isError) => {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--text2)';
+};
+
+// ────────────────────────────────────────────
+// EXPIRATION GENERATION (zero API calls)
+// ────────────────────────────────────────────
+function generateExpirations(ticker, count) {
+  const cls = TICKER_PATTERN[ticker.toUpperCase()] || 'fri';
+  const allowedDays = cls === 'daily' ? [1,2,3,4,5] : cls === 'mwf' ? [1,3,5] : [5];
+  const fmt = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = fmt(today);
+  const dates = [], seen = new Set();
+  const start = INCLUDE_0DTE ? 0 : 1;
+  const window = Math.max(90, count * 14);
+  for (let i = start; i < window && dates.length < count; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    if (!allowedDays.includes(d.getDay())) continue;
+    const ymd = fmt(d);
+    if (HOLIDAY_ROLLBACK[ymd]) {
+      const r = HOLIDAY_ROLLBACK[ymd];
+      if (r > todayStr && !seen.has(r)) { dates.push(r); seen.add(r); }
+      continue;
+    }
+    if (US_HOLIDAYS.has(ymd)) continue;
+    if (!seen.has(ymd)) { dates.push(ymd); seen.add(ymd); }
+  }
+  return dates;
+}
+
+// ────────────────────────────────────────────
+// FETCH — SAME endpoint as main dashboard, serial with logging
+// ────────────────────────────────────────────
+async function fetchOneExpiry(ticker, expiry, key) {
+  // Endpoint chain — SAME ORDER as main dashboard's fetchExpiry.
+  // /spot-exposures/{expiry}/strike is the canonical endpoint and returns
+  // the correct GEX magnitudes. Other endpoints return different/smaller
+  // values (different calculation methods).
+  const tries = [
+    { url: `${UW_BASE}/api/stock/${ticker}/spot-exposures/${expiry}/strike`,                label: 'spot-exposures/{expiry}/strike' },
+    { url: `${UW_BASE}/api/stock/${ticker}/greek-exposure/strike-expiry?expiry=${expiry}`,  label: 'greek-exposure/strike-expiry' },
+    { url: `${UW_BASE}/api/stock/${ticker}/spot-exposures/expiry-strike?expiry=${expiry}`,  label: 'spot-exposures/expiry-strike' }
+  ];
+
+  for (const t of tries) {
+    console.log(`[HS fetch] ${ticker} ${expiry} via ${t.label}`);
+    try {
+      const r = await fetch(t.url, { headers: { 'Authorization': 'Bearer ' + key } });
+      if (!r.ok) {
+        if (r.status !== 404 && r.status !== 410) console.warn(`[HS fetch] ${expiry} ${t.label} HTTP ${r.status}`);
+        continue;
+      }
+      const j = await r.json();
+      const allRows = (j && j.data) || [];
+      if (allRows.length === 0) {
+        console.log(`[HS fetch] ${expiry} ${t.label} returned 0 rows — trying next endpoint`);
+        continue;
+      }
+
+      // Client-side filter: some UW endpoints return all expirations regardless of
+      // the URL parameter, with each row tagged with its own expiry field.
+      // The /spot-exposures/{expiry}/strike path-based endpoint normally filters
+      // server-side but we filter anyway as defense-in-depth.
+      let filteredRows = allRows;
+      const expiryFieldCandidates = ['expiry', 'expiration', 'expiry_date', 'date'];
+      let expiryField = null;
+      for (const k of expiryFieldCandidates) {
+        if (allRows[0][k] !== undefined) { expiryField = k; break; }
+      }
+      if (expiryField) {
+        const normalize = s => String(s).slice(0, 10);
+        const target = normalize(expiry);
+        const f = allRows.filter(r => normalize(r[expiryField]) === target);
+        if (f.length > 0) filteredRows = f;
+        console.log(`[HS fetch] ${expiry} via ${t.label}: ${filteredRows.length} of ${allRows.length} rows after filter`);
+      } else {
+        console.log(`[HS fetch] ${expiry} via ${t.label}: ${allRows.length} rows (no expiry field — already per-expiry)`);
+      }
+
+      // Log sample row so we can see actual field names UW returned
+      console.log(`[HS fetch] ${expiry} sample row:`, filteredRows[0]);
+
+      // SAME formula as main dashboard's transformUWtoFA:
+      // UW signs put_gamma_oi as NEGATIVE already, so net_gex = call_gamma + put_gamma
+      const strikes = filteredRows.map(r => {
+        const strike = parseFloat(r.strike);
+        const cg = parseFloat(r.call_gamma_oi ?? r.call_gamma ?? r.call_gex ?? r.gamma_call ?? 0);
+        const pg = parseFloat(r.put_gamma_oi  ?? r.put_gamma  ?? r.put_gex  ?? r.gamma_put  ?? 0);
+        return { strike, gex: cg + pg };
+      }).filter(s => Number.isFinite(s.strike));
+      strikes.sort((a, b) => b.strike - a.strike);
+
+      if (strikes.length === 0) {
+        console.log(`[HS fetch] ${expiry} ${t.label}: 0 valid strikes — try next endpoint`);
+        continue;
+      }
+
+      console.log(`%c[HS fetch] ✓ ${expiry} loaded ${strikes.length} strikes via ${t.label}`, 'color:#00ff88;');
+      return { strikes, rawCount: filteredRows.length, status: 200, endpoint: t.label };
+    } catch (e) {
+      console.error(`[HS fetch] ${expiry} ${t.label} error:`, e);
+    }
+  }
+  return { strikes: [], rawCount: 0, status: 'error' };
+}
+
+async function fetchSpot(ticker, key) {
+  try {
+    const r = await fetch(`${UW_BASE}/api/stock/${ticker}/stock-state`,
+      { headers: { 'Authorization': 'Bearer ' + key } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const d = (j && j.data) || j || {};
+    const price = parseFloat(d.last || d.close || d.price || 0);
+    const prevClose = parseFloat(d.prev_close || d.previous_close || 0);
+    const change = prevClose ? ((price - prevClose) / prevClose) * 100 : null;
+    return { price, change };
+  } catch (e) { return null; }
+}
+
+// ────────────────────────────────────────────
+// MAIN LOAD — SERIAL with 100ms gap between calls
+// ────────────────────────────────────────────
+async function loadMatrix() {
+  const key = document.getElementById('api-key').value.trim();
+  const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+  const count = parseInt(document.getElementById('expiry-count').value);
+  if (!key) { setStatus('Enter API key first.', true); return; }
+  if (!ticker) { setStatus('Enter a ticker first.', true); return; }
+
+  try {
+    localStorage.setItem('hs_uw_key', key);
+    localStorage.setItem('hs_last_ticker', ticker);
+  } catch (e) {}
+
+  document.getElementById('btn-load').disabled = true;
+  document.getElementById('btn-refresh').disabled = true;
+  document.getElementById('empty-msg').style.display = 'none';
+
+  console.log(`%c[HS] Loading ${ticker} (${count} expirations) — SERIAL mode`, 'color:#2eb6c8;font-weight:bold;');
+
+  // Fetch spot first
+  const spot = await fetchSpot(ticker, key);
+  lastSpot = spot;
+  updateTickerDisplay(ticker, spot);
+
+  const expiries = generateExpirations(ticker, count);
+  console.log(`[HS] Generated expirations:`, expiries);
+
+  // Clear cache so we always get fresh data on Load
+  expiries.forEach(exp => delete dataCache[ticker + exp]);
+
+  // SERIAL fetching — one at a time with 100ms gap
+  let success = 0, empty = 0, failed = 0;
+  for (let i = 0; i < expiries.length; i++) {
+    const exp = expiries[i];
+    setStatus(`Fetching ${i+1}/${expiries.length}: ${exp}...`);
+    const result = await fetchOneExpiry(ticker, exp, key);
+    if (result.status === 200 && result.rawCount > 0) {
+      dataCache[ticker + exp] = result.strikes;
+      success++;
+    } else if (result.status === 200 && result.rawCount === 0) {
+      dataCache[ticker + exp] = [];
+      empty++;
+    } else {
+      dataCache[ticker + exp] = [];
+      failed++;
+    }
+    // Small gap between requests to avoid any rate-limit weirdness
+    if (i < expiries.length - 1) await new Promise(r => setTimeout(r, 100));
+  }
+
+  lastTicker = ticker;
+  lastExpiries = expiries;
+  renderMatrix(ticker, expiries);
+  setStatus(`✓ ${success} loaded · ${empty} empty · ${failed} failed · check console for details`);
+
+  document.getElementById('btn-load').disabled = false;
+  document.getElementById('btn-refresh').disabled = false;
+}
+
+function updateTickerDisplay(ticker, spot) {
+  const el = document.getElementById('ticker-display');
+  if (!spot || !spot.price) {
+    el.innerHTML = `<span class="symbol">${ticker}</span> <span class="price">—</span> <span class="change">—</span>`;
+    return;
+  }
+  const ch = spot.change;
+  const chCls = ch == null ? '' : (ch >= 0 ? 'pos' : 'neg');
+  const chTxt = ch == null ? '—' : `${ch >= 0 ? '+' : ''}${ch.toFixed(2)}%`;
+  el.innerHTML = `<span class="symbol">${ticker}</span> <span class="price">${spot.price.toFixed(2)}</span> <span class="change ${chCls}">${chTxt}</span>`;
+}
+
+// ────────────────────────────────────────────
+// RENDER MATRIX
+// ────────────────────────────────────────────
+function renderMatrix(ticker, expiries) {
+  const strikeSet = new Set();
+  expiries.forEach(exp => {
+    (dataCache[ticker + exp] || []).forEach(s => strikeSet.add(s.strike));
+  });
+  if (strikeSet.size === 0) {
+    document.getElementById('empty-msg').style.display = 'block';
+    document.getElementById('empty-msg').innerHTML = `No strike data returned for ${ticker}.<br><span style="font-size:12px;opacity:0.6;">Check the browser Console (F12) for details from each UW call.</span>`;
+    document.getElementById('matrix').style.display = 'none';
+    return;
+  }
+
+  // Strike count: user-selectable via STRIKES dropdown (default 80, max 9999=All)
+  const strikeLimit = parseInt(document.getElementById('strike-count').value) || 80;
+  let strikes = Array.from(strikeSet);
+  if (lastSpot && lastSpot.price && strikes.length > strikeLimit) {
+    strikes.sort((a, b) => Math.abs(a - lastSpot.price) - Math.abs(b - lastSpot.price));
+    strikes = strikes.slice(0, strikeLimit);
+  }
+  strikes.sort((a, b) => b - a);
+
+  let maxAbs = 1;
+  expiries.forEach(exp => {
+    (dataCache[ticker + exp] || []).forEach(s => {
+      const v = Math.abs(s.gex || 0);
+      if (v > maxAbs) maxAbs = v;
+    });
+  });
+
+  // King Node per expiry column
+  const kingByExpiry = {};
+  expiries.forEach(exp => {
+    const data = dataCache[ticker + exp] || [];
+    let maxV = 0, maxStrike = null;
+    data.forEach(s => {
+      const v = Math.abs(s.gex || 0);
+      if (v > maxV) { maxV = v; maxStrike = s.strike; }
+    });
+    kingByExpiry[exp] = maxStrike;
+  });
+
+  const monthAbbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dayAbbr = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let headHtml = '<th class="strike-col">Strike</th>';
+  expiries.forEach(exp => {
+    const [y,m,d] = exp.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    const label = dayAbbr[dt.getDay()] + ' ' + monthAbbr[dt.getMonth()] + ' ' + dt.getDate();
+    headHtml += `<th>${label}</th>`;
+  });
+  document.getElementById('matrix-head').innerHTML = headHtml;
+
+  // Find ATM strike — the one closest to current spot price
+  let atmStrike = null;
+  if (lastSpot && lastSpot.price) {
+    let minDiff = Infinity;
+    strikes.forEach(s => {
+      const diff = Math.abs(s - lastSpot.price);
+      if (diff < minDiff) { minDiff = diff; atmStrike = s; }
+    });
+  }
+
+  let bodyHtml = '';
+  strikes.forEach(strike => {
+    const strikeLabel = (strike === atmStrike)
+      ? `<span class="atm-pill">${strike.toFixed(1)}</span>`
+      : strike.toFixed(1);
+    bodyHtml += `<tr><td class="strike-col">${strikeLabel}</td>`;
+    expiries.forEach(exp => {
+      const data = dataCache[ticker + exp] || [];
+      const row = data.find(s => s.strike === strike);
+      const v = row ? (row.gex || 0) : 0;
+      const isKing = kingByExpiry[exp] === strike && Math.abs(v) > 0;
+      const bg = getCellColor(v, maxAbs);
+      const cls = isKing ? 'king-node' : '';
+      bodyHtml += `<td class="${cls}" style="background:${bg};color:${getCellTextColor(v, maxAbs)}">${fnumK(v)}</td>`;
+    });
+    bodyHtml += `</tr>`;
+  });
+  document.getElementById('matrix-body').innerHTML = bodyHtml;
+  document.getElementById('matrix').style.display = '';
+  document.getElementById('empty-msg').style.display = 'none';
+}
+
+// Strike count change: re-render from cache (zero API calls, instant update)
+function onStrikeCountChange() {
+  try { localStorage.setItem('hs_strike_count', document.getElementById('strike-count').value); } catch(e) {}
+  if (lastTicker && lastExpiries.length) renderMatrix(lastTicker, lastExpiries);
+}
+
+// Matches main dashboard exactly:
+//   Positive: teal (small) → green → bright yellow (max)
+//   Negative: teal/cyan (small) → blue → bright purple (max)
+function getCellColor(val, maxAbs) {
+  if (!val) return 'transparent';
+  const ratio = Math.min(Math.abs(val) / maxAbs, 1);
+  if (val > 0) {
+    const r = Math.floor(20 + ratio * 235);
+    const g = Math.floor(160 + ratio * 95);
+    const b = Math.floor(140 - ratio * 140);
+    return `rgba(${r},${g},${b},0.85)`;
+  } else {
+    const r = Math.floor(30 + ratio * 108);
+    const g = Math.floor(150 - ratio * 150);
+    const b = Math.floor(130 + ratio * 96);
+    return `rgba(${r},${g},${b},0.85)`;
+  }
+}
+function getCellTextColor(val, maxAbs) {
+  if (!val) return 'var(--text3)';
+  return Math.abs(val) / maxAbs > 0.6 ? '#fff' : 'var(--text)';
+}
+
+// ────────────────────────────────────────────
+// LOCAL CLOCK — updates once per second, same format as main dashboard
+// ────────────────────────────────────────────
+function startClock() {
+  const el = document.getElementById('live-clock');
+  if (!el) return;
+  const tick = () => {
+    el.textContent = new Date().toLocaleTimeString('en-US', {
+      hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+    });
+  };
+  tick();                          // immediate first render
+  setInterval(tick, 1000);
+}
+startClock();
+
+// Register service worker for offline support + mobile install
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('[HS] Service worker registered'))
+      .catch(e => console.warn('[HS] SW registration failed:', e));
+  });
+}
+</script>
+</body>
+</html>
