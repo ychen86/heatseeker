@@ -96,14 +96,14 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); }
 .hs-delta.down { color: #ff5252; }
 
 /* ── Voltick pattern markers — overlay accents that don't replace heat colors ── */
-.matrix-table td.is-volt, .matrix-table td.is-reversal, .matrix-table td.is-coil, .matrix-table td.is-air { position: relative; }
-/* Volt ★ — biggest |GEX| in a column. Red outline + red star (matches original King Node). */
-.matrix-table td.is-volt { outline: 2px solid var(--red); outline-offset: -2px; }
-.matrix-table td.is-volt::before { content: '★'; position: absolute; top: 2px; left: 4px; font-size: 12px; color: var(--red); text-shadow: 0 0 3px rgba(0,0,0,0.9); line-height: 1; font-weight: 700; }
-/* Reversal ↘ — biggest opposite-sign strike. Dark purple border. */
-.matrix-table td.is-reversal { box-shadow: inset 0 0 0 2px #4b038a; }
-.matrix-table td.is-reversal::before { content: '↘'; position: absolute; top: 2px; left: 4px; font-size: 11px; color: #4b038a; text-shadow: 0 0 3px rgba(255,255,255,0.5); line-height: 1; font-weight: 700; }
-/* Coil ◆ — strikes with ≥50% of Volt weight. Dark blue left ring. */
+.matrix-table td.is-king, .matrix-table td.is-reversal, .matrix-table td.is-coil, .matrix-table td.is-air { position: relative; }
+/* King ★ — biggest |GEX| in a column. Red outline + red star (matches original King Node). */
+.matrix-table td.is-king { outline: 2px solid var(--red); outline-offset: -2px; }
+.matrix-table td.is-king::before { content: '★'; position: absolute; top: 2px; left: 4px; font-size: 12px; color: var(--red); text-shadow: 0 0 3px rgba(0,0,0,0.9); line-height: 1; font-weight: 700; }
+/* Reversal ↘ — biggest opposite-sign strike. Light pink border. */
+.matrix-table td.is-reversal { box-shadow: inset 0 0 0 2px #ffabf9; }
+.matrix-table td.is-reversal::before { content: '↘'; position: absolute; top: 2px; left: 4px; font-size: 11px; color: #ffabf9; text-shadow: 0 0 3px rgba(0,0,0,0.9); line-height: 1; font-weight: 700; }
+/* Coil ◆ — strikes with ≥50% of King weight. Dark blue left ring. */
 .matrix-table td.is-coil { border-left: 3px solid #1d4ed8 !important; }
 .matrix-table td.is-coil::before { content: '◆'; position: absolute; top: 2px; left: 4px; font-size: 9px; color: #1d4ed8; text-shadow: 0 0 3px rgba(255,255,255,0.4); line-height: 1; }
 /* Air pocket ≈ — 3+ consecutive near-zero strikes. Dimmed + tilde. */
@@ -225,7 +225,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); }
     <option value="9999">All</option>
   </select>
   <button class="btn primary" id="btn-load" onclick="loadMatrix()">⚡ LOAD</button>
-  <button class="btn patterns-on" id="btn-patterns" onclick="toggleVoltickPatterns()" title="Toggle Voltick pattern markers (Volt ★, Reversal ↘, Coil ◆, Air ≈)">★ PATTERNS</button>
+  <button class="btn patterns-on" id="btn-patterns" onclick="toggleVoltickPatterns()" title="Toggle GAMMA pattern markers (King ★, Reversal ↘, Guard ◆, Gap ≈)">★ PATTERNS</button>
   <span class="status" id="status">Ready · open browser DevTools (F12) Console to see fetch debug</span>
 </div>
 
@@ -445,7 +445,7 @@ function toggleVoltickPatterns() {
   try { localStorage.setItem('hs_voltick_patterns', showVoltickPatterns ? '1' : '0'); } catch(e) {}
   const btn = document.getElementById('btn-patterns');
   if (btn) btn.classList.toggle('patterns-on', showVoltickPatterns);
-  console.log('[HS] Voltick patterns ' + (showVoltickPatterns ? 'ENABLED' : 'DISABLED'));
+  console.log('[HS] GAMMA patterns ' + (showVoltickPatterns ? 'ENABLED' : 'DISABLED'));
   if (lastTicker && lastExpiries.length) renderMatrix(lastTicker, lastExpiries);
 }
 
@@ -462,10 +462,10 @@ function formatDelta(d) {
 
 // ────────────────────────────────────────────
 // VOLTICK PATTERN DETECTION (per column)
-//   Volt ★      — biggest |GEX| strike
-//   Reversal ↘  — biggest |GEX| with opposite sign to Volt (≥10% of Volt to qualify)
-//   Coils ◆     — strikes with ≥50% of Volt weight (excluding Volt + Reversal)
-//   Air pockets ≈ — 3+ consecutive strikes (in render order) with |GEX| < 3% of Volt
+//   King ★      — biggest |GEX| strike
+//   Reversal ↘  — biggest |GEX| with opposite sign to King (≥10% of King to qualify)
+//   Coils ◆     — strikes with ≥50% of King weight (excluding King + Reversal)
+//   Air pockets ≈ — 3+ consecutive strikes (in render order) with |GEX| < 3% of King
 // ────────────────────────────────────────────
 function detectVoltickPatterns(strikes, sortedStrikes) {
   const result = new Map();
@@ -476,39 +476,39 @@ function detectVoltickPatterns(strikes, sortedStrikes) {
   });
   if (gexByStrike.size === 0) return result;
 
-  // Volt
-  let voltStrike = null, voltAbs = 0, voltSign = 0;
+  // King
+  let kingStrike = null, kingAbs = 0, kingSign = 0;
   for (const [strike, gex] of gexByStrike) {
-    if (Math.abs(gex) > voltAbs) {
-      voltAbs = Math.abs(gex);
-      voltStrike = strike;
-      voltSign = Math.sign(gex);
+    if (Math.abs(gex) > kingAbs) {
+      kingAbs = Math.abs(gex);
+      kingStrike = strike;
+      kingSign = Math.sign(gex);
     }
   }
-  if (voltAbs < 500000) return result;   // skip thin columns
-  result.set(voltStrike, 'volt');
+  if (kingAbs < 500000) return result;   // skip thin columns
+  result.set(kingStrike, 'king');
 
   // Reversal
   let reversalStrike = null, reversalAbs = 0;
   for (const [strike, gex] of gexByStrike) {
-    if (Math.sign(gex) === -voltSign && Math.abs(gex) > reversalAbs) {
+    if (Math.sign(gex) === -kingSign && Math.abs(gex) > reversalAbs) {
       reversalAbs = Math.abs(gex);
       reversalStrike = strike;
     }
   }
-  if (reversalStrike != null && reversalAbs >= voltAbs * 0.1) {
+  if (reversalStrike != null && reversalAbs >= kingAbs * 0.1) {
     result.set(reversalStrike, 'reversal');
   }
 
   // Coils
-  const coilThreshold = voltAbs * 0.5;
+  const coilThreshold = kingAbs * 0.5;
   for (const [strike, gex] of gexByStrike) {
-    if (strike === voltStrike || strike === reversalStrike) continue;
+    if (strike === kingStrike || strike === reversalStrike) continue;
     if (Math.abs(gex) >= coilThreshold) result.set(strike, 'coil');
   }
 
   // Air pockets — runs of 3+ consecutive near-zero strikes in render order
-  const airThreshold = voltAbs * 0.03;
+  const airThreshold = kingAbs * 0.03;
   let runStart = -1;
   for (let i = 0; i < sortedStrikes.length; i++) {
     const strike = sortedStrikes[i];
@@ -846,7 +846,7 @@ function renderMatrix(ticker, expiries) {
   });
 
   // Pre-compute Voltick patterns per column (when toggle is on)
-  // Returns Map<strike, 'volt'|'reversal'|'coil'|'air'> for each expiry
+  // Returns Map<strike, 'king'|'reversal'|'coil'|'air'> for each expiry
   const patternsPerExpiry = new Map();
   if (showVoltickPatterns) {
     expiries.forEach(exp => {
@@ -889,7 +889,7 @@ function renderMatrix(ticker, expiries) {
       const v = row ? (row.gex || 0) : 0;
 
       // Voltick pattern marker (if enabled)
-      // 'volt' takes priority over the legacy king-node ★ red border (mutually exclusive).
+      // 'king' takes priority over the legacy king-node ★ red border (mutually exclusive).
       let patternClass = '';
       if (showVoltickPatterns) {
         const colPatterns = patternsPerExpiry.get(exp);
