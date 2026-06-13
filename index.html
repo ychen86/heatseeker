@@ -3,9 +3,6 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta name="theme-color" content="#0a1612"/>
-<link rel="manifest" href="manifest.json"/>
-<link rel="icon" type="image/png" href="icon-192.png"/>
 <title>HeatSeeker Matrix</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -65,7 +62,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); }
 
 /* Matrix */
 .matrix-wrap {
-  height: calc(100vh - 125px);
+  height: calc(100vh - 169px);
   overflow: auto;
 }
 .matrix-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -86,6 +83,52 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); }
 }
 .king-node { box-shadow: inset 0 0 0 2px var(--red); position: relative; }
 .king-node::after { content: '★'; color: var(--red); margin-left: 4px; font-size: 14px; }
+
+/* Clickable column header (refresh that single column) */
+.matrix-table th.col-clickable { cursor: pointer; transition: 0.15s; }
+.matrix-table th.col-clickable:hover { background: rgba(46,182,200,0.15); color: var(--teal); }
+.matrix-table th.col-clickable::after { content: ' ↻'; opacity: 0.4; font-size: 11px; }
+.matrix-table th.col-clickable.refreshing { background: rgba(255,170,0,0.2); color: var(--amber); }
+
+/* Delta indicator inside cells (change vs previous fetch) */
+.hs-delta { display: block; font-size: 10px; font-weight: 600; margin-top: 2px; opacity: 0.95; letter-spacing: 0.3px; }
+.hs-delta.up { color: #00ff88; }
+.hs-delta.down { color: #ff5252; }
+
+/* ── Voltick pattern markers — overlay accents that don't replace heat colors ── */
+.matrix-table td.is-volt, .matrix-table td.is-reversal, .matrix-table td.is-coil, .matrix-table td.is-air { position: relative; }
+/* Volt ★ — biggest |GEX| in a column. Red outline + red star (matches original King Node). */
+.matrix-table td.is-volt { outline: 2px solid var(--red); outline-offset: -2px; }
+.matrix-table td.is-volt::before { content: '★'; position: absolute; top: 2px; left: 4px; font-size: 12px; color: var(--red); text-shadow: 0 0 3px rgba(0,0,0,0.9); line-height: 1; font-weight: 700; }
+/* Reversal ↘ — biggest opposite-sign strike. Dark purple border. */
+.matrix-table td.is-reversal { box-shadow: inset 0 0 0 2px #4b038a; }
+.matrix-table td.is-reversal::before { content: '↘'; position: absolute; top: 2px; left: 4px; font-size: 11px; color: #4b038a; text-shadow: 0 0 3px rgba(255,255,255,0.5); line-height: 1; font-weight: 700; }
+/* Coil ◆ — strikes with ≥50% of Volt weight. Dark blue left ring. */
+.matrix-table td.is-coil { border-left: 3px solid #1d4ed8 !important; }
+.matrix-table td.is-coil::before { content: '◆'; position: absolute; top: 2px; left: 4px; font-size: 9px; color: #1d4ed8; text-shadow: 0 0 3px rgba(255,255,255,0.4); line-height: 1; }
+/* Air pocket ≈ — 3+ consecutive near-zero strikes. Dimmed + tilde. */
+.matrix-table td.is-air { opacity: 0.5; }
+.matrix-table td.is-air::before { content: '≈'; position: absolute; top: 2px; left: 4px; font-size: 12px; color: #aaa; line-height: 1; font-weight: 700; }
+
+/* Patterns toggle button visual state */
+.btn.patterns-on { background: rgba(255,51,51,0.15); color: var(--red); border-color: var(--red); }
+
+/* ── TRACKED tickers chip bar ── */
+.chip-bar { background: #0a0a0a; border-bottom: 1px solid var(--border); padding: 9px 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 44px; }
+.chip-label { font-family: var(--mono); font-size: 13px; color: var(--text3); letter-spacing: 1.5px; margin-right: 6px; text-transform: uppercase; }
+.ticker-chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px 6px 14px; background: var(--panel); border: 1px solid var(--border2); border-radius: 18px; font-family: var(--mono); font-size: 15px; color: var(--text2); cursor: pointer; transition: all .15s; user-select: none; }
+.ticker-chip:hover { border-color: var(--teal); }
+.ticker-chip.active { background: rgba(46,182,200,0.15); border-color: var(--teal); color: var(--teal); font-weight: 700; }
+.ticker-chip .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
+.ticker-chip .chip-dot.fresh { background: var(--green); }
+.ticker-chip .chip-dot.aging { background: var(--amber); }
+.ticker-chip .chip-dot.stale { background: var(--red); }
+.ticker-chip .chip-name { letter-spacing: 1px; }
+.ticker-chip .chip-age { font-size: 12px; color: var(--text3); }
+.ticker-chip.active .chip-age { color: var(--teal); opacity: .7; }
+.ticker-chip .chip-close { margin-left: 3px; font-size: 16px; color: var(--text3); cursor: pointer; padding: 0 6px; border-radius: 3px; line-height: 1; }
+.ticker-chip .chip-close:hover { color: var(--red); background: rgba(255,51,51,0.12); }
+.chip-empty { font-family: var(--mono); font-size: 14px; color: var(--text3); font-style: italic; }
 
 /* Current spot price marker — Skylit-style white pill wrapping the ATM strike */
 .atm-pill {
@@ -182,7 +225,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); }
     <option value="9999">All</option>
   </select>
   <button class="btn primary" id="btn-load" onclick="loadMatrix()">⚡ LOAD</button>
+  <button class="btn patterns-on" id="btn-patterns" onclick="toggleVoltickPatterns()" title="Toggle Voltick pattern markers (Volt ★, Reversal ↘, Coil ◆, Air ≈)">★ PATTERNS</button>
   <span class="status" id="status">Ready · open browser DevTools (F12) Console to see fetch debug</span>
+</div>
+
+<div class="chip-bar" id="chip-bar">
+  <span class="chip-label">▸ TRACKED</span>
+  <span class="chip-empty" id="chip-empty">No tickers yet — type a symbol above and click ⚡ LOAD</span>
 </div>
 
 <div class="matrix-wrap" id="matrix-wrap">
@@ -230,12 +279,22 @@ const US_HOLIDAYS = new Set([
 ]);
 const HOLIDAY_ROLLBACK = { '2026-04-03':'2026-04-02','2026-06-19':'2026-06-18' };
 
-let dataCache = {};
+let dataCache = {};   // dataCache[ticker+expiry] = { strikes, prevStrikes, lastFetchAt }
+let spotCache = {};   // spotCache[ticker] = { price, change, fetchedAt }
 let lastSpot = null;
 let lastTicker = '';
 let lastExpiries = [];
 
-// Restore saved key + ticker + strike count
+// ── Multi-ticker chip bar state ──
+let trackedTickers = [];
+let currentTicker = '';
+let tickerLastFetch = {};
+let chipAgeTimer = null;
+
+// ── Voltick patterns toggle (persists) ──
+let showVoltickPatterns = true;
+
+// Restore saved key + ticker + strike count + tracked list + patterns toggle
 (function restoreSaved() {
   try {
     const k = localStorage.getItem('hs_uw_key');
@@ -247,8 +306,229 @@ let lastExpiries = [];
       const sel = document.getElementById('strike-count');
       for (const opt of sel.options) if (opt.value === sc) { opt.selected = true; break; }
     }
+    const tt = localStorage.getItem('hs_tracked_tickers');
+    if (tt) trackedTickers = JSON.parse(tt).filter(s => typeof s === 'string' && s.length > 0 && s.length <= 6);
+    const vp = localStorage.getItem('hs_voltick_patterns');
+    if (vp === '0') showVoltickPatterns = false;
   } catch(e) {}
 })();
+
+function persistTrackedTickers() {
+  try { localStorage.setItem('hs_tracked_tickers', JSON.stringify(trackedTickers)); } catch(e) {}
+}
+
+// ────────────────────────────────────────────
+// CHIP BAR — tracked tickers UI
+// ────────────────────────────────────────────
+function chipAgeLabel(ts) {
+  if (!ts) return { label: 'new', cls: '' };
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1)  return { label: 'now',  cls: 'fresh' };
+  if (mins < 5)  return { label: mins + 'm', cls: 'fresh' };
+  if (mins < 15) return { label: mins + 'm', cls: 'aging' };
+  if (mins < 60) return { label: mins + 'm', cls: 'stale' };
+  return { label: Math.floor(mins/60) + 'h', cls: 'stale' };
+}
+
+function renderTickerChips() {
+  const bar = document.getElementById('chip-bar');
+  if (!bar) return;
+  [...bar.querySelectorAll('.ticker-chip, .chip-empty')].forEach(el => el.remove());
+  if (trackedTickers.length === 0) {
+    const e = document.createElement('span');
+    e.className = 'chip-empty';
+    e.id = 'chip-empty';
+    e.textContent = 'No tickers yet — type a symbol above and click ⚡ LOAD';
+    bar.appendChild(e);
+    return;
+  }
+  trackedTickers.forEach(t => {
+    const isActive = t === currentTicker;
+    const age = chipAgeLabel(tickerLastFetch[t]);
+    const chip = document.createElement('div');
+    chip.className = 'ticker-chip' + (isActive ? ' active' : '');
+    chip.title = isActive ? 'Currently viewing ' + t : 'Switch to ' + t;
+    chip.innerHTML =
+      '<span class="chip-dot ' + age.cls + '"></span>' +
+      '<span class="chip-name">' + t + '</span>' +
+      '<span class="chip-age">' + age.label + '</span>' +
+      '<span class="chip-close" title="Remove ' + t + '">×</span>';
+    chip.addEventListener('click', (ev) => {
+      if (ev.target.classList.contains('chip-close')) {
+        ev.stopPropagation();
+        removeTickerChip(t);
+      } else {
+        switchToTicker(t);
+      }
+    });
+    bar.appendChild(chip);
+  });
+}
+
+function startChipAgeTimer() {
+  if (chipAgeTimer) return;
+  chipAgeTimer = setInterval(renderTickerChips, 30000);
+}
+
+function addTrackedTicker(ticker) {
+  if (!ticker) return;
+  ticker = ticker.toUpperCase();
+  if (!trackedTickers.includes(ticker)) {
+    trackedTickers.push(ticker);
+    persistTrackedTickers();
+  }
+}
+
+function removeTickerChip(ticker) {
+  trackedTickers = trackedTickers.filter(t => t !== ticker);
+  persistTrackedTickers();
+  // Wipe this ticker's cached strike data
+  Object.keys(dataCache).forEach(k => { if (k.startsWith(ticker)) delete dataCache[k]; });
+  delete spotCache[ticker];
+  delete tickerLastFetch[ticker];
+  console.log('[HS] Removed ' + ticker + ' from tracked list');
+  if (currentTicker === ticker) {
+    if (trackedTickers.length > 0) {
+      switchToTicker(trackedTickers[0]);
+    } else {
+      currentTicker = '';
+      lastTicker = '';
+      lastExpiries = [];
+      document.getElementById('matrix').style.display = 'none';
+      document.getElementById('empty-msg').style.display = 'block';
+      document.getElementById('empty-msg').innerHTML = 'Paste your Unusual Whales API key, enter a ticker, click <strong>LOAD</strong>.';
+      renderTickerChips();
+    }
+  } else {
+    renderTickerChips();
+  }
+}
+
+// Switch to a different already-tracked ticker. Renders from cache if available;
+// no API calls needed unless the cache is empty for the target ticker.
+function switchToTicker(ticker) {
+  if (!ticker || ticker === currentTicker) return;
+  console.log(`[HS] Switching to ${ticker}`);
+  currentTicker = ticker;
+  // Update ticker input box so user sees what's active
+  const ti = document.getElementById('ticker');
+  if (ti) ti.value = ticker;
+  // Restore last-known spot for this ticker (display only — refreshed on LOAD)
+  if (spotCache[ticker]) {
+    lastSpot = spotCache[ticker];
+    updateTickerDisplay(ticker, lastSpot);
+  } else {
+    lastSpot = null;
+    updateTickerDisplay(ticker, null);
+  }
+  // Render whatever cached data exists for this ticker
+  const expiries = generateExpirations(ticker, parseInt(document.getElementById('expiry-count').value));
+  lastTicker = ticker;
+  lastExpiries = expiries;
+  // Check if we have any cached data for this ticker's expirations
+  const hasCachedData = expiries.some(exp => dataCache[ticker + exp]?.strikes?.length > 0);
+  if (hasCachedData) {
+    renderMatrix(ticker, expiries);
+    setStatus(`✓ ${ticker} loaded from cache (click LOAD to refresh)`);
+  } else {
+    document.getElementById('matrix').style.display = 'none';
+    document.getElementById('empty-msg').style.display = 'block';
+    document.getElementById('empty-msg').innerHTML = `${ticker} has no cached data yet.<br>Click <strong>⚡ LOAD</strong> to fetch.`;
+    setStatus(`${ticker} — click LOAD to fetch`);
+  }
+  renderTickerChips();
+}
+
+// Patterns toggle
+function toggleVoltickPatterns() {
+  showVoltickPatterns = !showVoltickPatterns;
+  try { localStorage.setItem('hs_voltick_patterns', showVoltickPatterns ? '1' : '0'); } catch(e) {}
+  const btn = document.getElementById('btn-patterns');
+  if (btn) btn.classList.toggle('patterns-on', showVoltickPatterns);
+  console.log('[HS] Voltick patterns ' + (showVoltickPatterns ? 'ENABLED' : 'DISABLED'));
+  if (lastTicker && lastExpiries.length) renderMatrix(lastTicker, lastExpiries);
+}
+
+// Format delta value for the cell footer (▲$5M / ▼$5M)
+function formatDelta(d) {
+  const a = Math.abs(d);
+  let v;
+  if (a >= 1e9) v = (a/1e9).toFixed(1) + 'B';
+  else if (a >= 1e6) v = (a/1e6).toFixed(1) + 'M';
+  else if (a >= 1e3) v = (a/1e3).toFixed(1) + 'K';
+  else v = a.toFixed(0);
+  return (d > 0 ? '▲' : '▼') + '$' + v;
+}
+
+// ────────────────────────────────────────────
+// VOLTICK PATTERN DETECTION (per column)
+//   Volt ★      — biggest |GEX| strike
+//   Reversal ↘  — biggest |GEX| with opposite sign to Volt (≥10% of Volt to qualify)
+//   Coils ◆     — strikes with ≥50% of Volt weight (excluding Volt + Reversal)
+//   Air pockets ≈ — 3+ consecutive strikes (in render order) with |GEX| < 3% of Volt
+// ────────────────────────────────────────────
+function detectVoltickPatterns(strikes, sortedStrikes) {
+  const result = new Map();
+  if (!strikes || strikes.length === 0) return result;
+  const gexByStrike = new Map();
+  strikes.forEach(s => {
+    if (s.gex != null && Number.isFinite(s.gex)) gexByStrike.set(s.strike, s.gex);
+  });
+  if (gexByStrike.size === 0) return result;
+
+  // Volt
+  let voltStrike = null, voltAbs = 0, voltSign = 0;
+  for (const [strike, gex] of gexByStrike) {
+    if (Math.abs(gex) > voltAbs) {
+      voltAbs = Math.abs(gex);
+      voltStrike = strike;
+      voltSign = Math.sign(gex);
+    }
+  }
+  if (voltAbs < 500000) return result;   // skip thin columns
+  result.set(voltStrike, 'volt');
+
+  // Reversal
+  let reversalStrike = null, reversalAbs = 0;
+  for (const [strike, gex] of gexByStrike) {
+    if (Math.sign(gex) === -voltSign && Math.abs(gex) > reversalAbs) {
+      reversalAbs = Math.abs(gex);
+      reversalStrike = strike;
+    }
+  }
+  if (reversalStrike != null && reversalAbs >= voltAbs * 0.1) {
+    result.set(reversalStrike, 'reversal');
+  }
+
+  // Coils
+  const coilThreshold = voltAbs * 0.5;
+  for (const [strike, gex] of gexByStrike) {
+    if (strike === voltStrike || strike === reversalStrike) continue;
+    if (Math.abs(gex) >= coilThreshold) result.set(strike, 'coil');
+  }
+
+  // Air pockets — runs of 3+ consecutive near-zero strikes in render order
+  const airThreshold = voltAbs * 0.03;
+  let runStart = -1;
+  for (let i = 0; i < sortedStrikes.length; i++) {
+    const strike = sortedStrikes[i];
+    const gex = gexByStrike.get(strike);
+    const alreadyMarked = result.has(strike);
+    const isNearZero = !alreadyMarked && (gex == null || Math.abs(gex) < airThreshold);
+    if (isNearZero) {
+      if (runStart === -1) runStart = i;
+    } else {
+      if (runStart !== -1 && (i - runStart) >= 3) {
+        for (let j = runStart; j < i; j++) result.set(sortedStrikes[j], 'air');
+      }
+      runStart = -1;
+    }
+  }
+  if (runStart !== -1 && (sortedStrikes.length - runStart) >= 3) {
+    for (let j = runStart; j < sortedStrikes.length; j++) result.set(sortedStrikes[j], 'air');
+  }
+  return result;
+}
 
 // ────────────────────────────────────────────
 // UTILITIES
@@ -402,50 +682,115 @@ async function loadMatrix() {
     localStorage.setItem('hs_last_ticker', ticker);
   } catch (e) {}
 
+  // Register as a tracked ticker + mark as current
+  addTrackedTicker(ticker);
+  currentTicker = ticker;
+
   document.getElementById('btn-load').disabled = true;
   document.getElementById('btn-refresh').disabled = true;
   document.getElementById('empty-msg').style.display = 'none';
 
   console.log(`%c[HS] Loading ${ticker} (${count} expirations) — SERIAL mode`, 'color:#2eb6c8;font-weight:bold;');
 
-  // Fetch spot first
+  // Fetch spot first + cache it for this ticker
   const spot = await fetchSpot(ticker, key);
   lastSpot = spot;
+  if (spot) spotCache[ticker] = { ...spot, fetchedAt: Date.now() };
   updateTickerDisplay(ticker, spot);
 
   const expiries = generateExpirations(ticker, count);
   console.log(`[HS] Generated expirations:`, expiries);
 
-  // Clear cache so we always get fresh data on Load
-  expiries.forEach(exp => delete dataCache[ticker + exp]);
-
   // SERIAL fetching — one at a time with 100ms gap
+  // Cache structure: { strikes, prevStrikes, lastFetchAt } — prevStrikes preserved
+  // from the previous load so the delta indicator (▲/▼) can compute deltas.
+  // NOTE: we no longer pre-delete the cache — we overwrite per-expiry below,
+  // capturing prevStrikes for delta computation. Other tickers' caches untouched.
   let success = 0, empty = 0, failed = 0;
+  const now = Date.now();
   for (let i = 0; i < expiries.length; i++) {
     const exp = expiries[i];
     setStatus(`Fetching ${i+1}/${expiries.length}: ${exp}...`);
     const result = await fetchOneExpiry(ticker, exp, key);
+    // Preserve previous strikes for delta indicator
+    const prevEntry = dataCache[ticker + exp];
+    const prevStrikes = prevEntry?.strikes || [];
+    let newStrikes;
     if (result.status === 200 && result.rawCount > 0) {
-      dataCache[ticker + exp] = result.strikes;
+      newStrikes = result.strikes;
       success++;
     } else if (result.status === 200 && result.rawCount === 0) {
-      dataCache[ticker + exp] = [];
+      newStrikes = [];
       empty++;
     } else {
-      dataCache[ticker + exp] = [];
+      newStrikes = [];
       failed++;
     }
+    dataCache[ticker + exp] = {
+      strikes: newStrikes,
+      prevStrikes,
+      lastFetchAt: now
+    };
     // Small gap between requests to avoid any rate-limit weirdness
     if (i < expiries.length - 1) await new Promise(r => setTimeout(r, 100));
   }
 
   lastTicker = ticker;
   lastExpiries = expiries;
+  tickerLastFetch[ticker] = Date.now();
   renderMatrix(ticker, expiries);
-  setStatus(`✓ ${success} loaded · ${empty} empty · ${failed} failed · check console for details`);
+  setStatus(`✓ ${success} loaded · ${empty} empty · ${failed} failed`);
+  renderTickerChips();
+  startChipAgeTimer();
 
   document.getElementById('btn-load').disabled = false;
   document.getElementById('btn-refresh').disabled = false;
+}
+
+// ────────────────────────────────────────────
+// REFRESH ONE COLUMN — fetches just a single expiry (click column header)
+// ────────────────────────────────────────────
+async function refreshColumn(expiry) {
+  const key = document.getElementById('api-key').value.trim();
+  const ticker = currentTicker || lastTicker;
+  if (!key || !ticker) { setStatus('Need API key + ticker first.', true); return; }
+  console.log(`[HS] Refreshing single column: ${ticker} ${expiry}`);
+
+  // Mark the header as refreshing visually
+  const thList = document.querySelectorAll('#matrix-head th');
+  let targetTh = null;
+  thList.forEach(th => {
+    if (th.dataset.expiry === expiry) targetTh = th;
+  });
+  if (targetTh) targetTh.classList.add('refreshing');
+
+  setStatus(`Refreshing ${expiry}...`);
+  // Refresh spot too (helps the delta + ATM accuracy)
+  const spot = await fetchSpot(ticker, key);
+  if (spot) {
+    spotCache[ticker] = { ...spot, fetchedAt: Date.now() };
+    lastSpot = spot;
+    updateTickerDisplay(ticker, spot);
+  }
+
+  const result = await fetchOneExpiry(ticker, expiry, key);
+  const prevEntry = dataCache[ticker + expiry];
+  const prevStrikes = prevEntry?.strikes || [];
+  let newStrikes;
+  if (result.status === 200 && result.rawCount > 0) newStrikes = result.strikes;
+  else newStrikes = [];
+
+  dataCache[ticker + expiry] = {
+    strikes: newStrikes,
+    prevStrikes,
+    lastFetchAt: Date.now()
+  };
+  tickerLastFetch[ticker] = Date.now();
+
+  if (targetTh) targetTh.classList.remove('refreshing');
+  renderMatrix(ticker, lastExpiries);
+  renderTickerChips();
+  setStatus(`✓ Refreshed ${expiry} (${newStrikes.length} strikes)`);
 }
 
 function updateTickerDisplay(ticker, spot) {
@@ -464,9 +809,17 @@ function updateTickerDisplay(ticker, spot) {
 // RENDER MATRIX
 // ────────────────────────────────────────────
 function renderMatrix(ticker, expiries) {
+  // Helper: get strikes array from new cache structure (object) or legacy (array)
+  const getStrikes = (key) => {
+    const entry = dataCache[key];
+    if (!entry) return [];
+    if (Array.isArray(entry)) return entry;          // legacy
+    return entry.strikes || [];
+  };
+
   const strikeSet = new Set();
   expiries.forEach(exp => {
-    (dataCache[ticker + exp] || []).forEach(s => strikeSet.add(s.strike));
+    getStrikes(ticker + exp).forEach(s => strikeSet.add(s.strike));
   });
   if (strikeSet.size === 0) {
     document.getElementById('empty-msg').style.display = 'block';
@@ -486,23 +839,20 @@ function renderMatrix(ticker, expiries) {
 
   let maxAbs = 1;
   expiries.forEach(exp => {
-    (dataCache[ticker + exp] || []).forEach(s => {
+    getStrikes(ticker + exp).forEach(s => {
       const v = Math.abs(s.gex || 0);
       if (v > maxAbs) maxAbs = v;
     });
   });
 
-  // King Node per expiry column
-  const kingByExpiry = {};
-  expiries.forEach(exp => {
-    const data = dataCache[ticker + exp] || [];
-    let maxV = 0, maxStrike = null;
-    data.forEach(s => {
-      const v = Math.abs(s.gex || 0);
-      if (v > maxV) { maxV = v; maxStrike = s.strike; }
+  // Pre-compute Voltick patterns per column (when toggle is on)
+  // Returns Map<strike, 'volt'|'reversal'|'coil'|'air'> for each expiry
+  const patternsPerExpiry = new Map();
+  if (showVoltickPatterns) {
+    expiries.forEach(exp => {
+      patternsPerExpiry.set(exp, detectVoltickPatterns(getStrikes(ticker + exp), strikes));
     });
-    kingByExpiry[exp] = maxStrike;
-  });
+  }
 
   const monthAbbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const dayAbbr = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -511,7 +861,8 @@ function renderMatrix(ticker, expiries) {
     const [y,m,d] = exp.split('-').map(Number);
     const dt = new Date(y, m-1, d);
     const label = dayAbbr[dt.getDay()] + ' ' + monthAbbr[dt.getMonth()] + ' ' + dt.getDate();
-    headHtml += `<th>${label}</th>`;
+    // Each column header is clickable to refresh just that column (1 credit)
+    headHtml += `<th class="col-clickable" data-expiry="${exp}" onclick="refreshColumn('${exp}')" title="Refresh ${label} only (1 API call)">${label}</th>`;
   });
   document.getElementById('matrix-head').innerHTML = headHtml;
 
@@ -532,13 +883,36 @@ function renderMatrix(ticker, expiries) {
       : strike.toFixed(1);
     bodyHtml += `<tr><td class="strike-col">${strikeLabel}</td>`;
     expiries.forEach(exp => {
-      const data = dataCache[ticker + exp] || [];
+      const entry = dataCache[ticker + exp];
+      const data = getStrikes(ticker + exp);
       const row = data.find(s => s.strike === strike);
       const v = row ? (row.gex || 0) : 0;
-      const isKing = kingByExpiry[exp] === strike && Math.abs(v) > 0;
+
+      // Voltick pattern marker (if enabled)
+      // 'volt' takes priority over the legacy king-node ★ red border (mutually exclusive).
+      let patternClass = '';
+      if (showVoltickPatterns) {
+        const colPatterns = patternsPerExpiry.get(exp);
+        const pat = colPatterns?.get(strike);
+        if (pat) patternClass = ' is-' + pat;
+      }
+
+      // Delta vs previous fetch (only when both current and prev exist)
+      let delta = null;
+      const prevStrikes = (entry && !Array.isArray(entry) && entry.prevStrikes) || [];
+      if (v !== 0 && prevStrikes.length > 0) {
+        const prevRow = prevStrikes.find(s => s.strike === strike);
+        if (prevRow && prevRow.gex != null) {
+          const d = v - prevRow.gex;
+          if (Math.abs(d) / Math.abs(v) >= 0.01) delta = d;
+        }
+      }
+      const deltaHtml = (delta !== null)
+        ? `<span class="hs-delta ${delta > 0 ? 'up' : 'down'}">${formatDelta(delta)}</span>`
+        : '';
+
       const bg = getCellColor(v, maxAbs);
-      const cls = isKing ? 'king-node' : '';
-      bodyHtml += `<td class="${cls}" style="background:${bg};color:${getCellTextColor(v, maxAbs)}">${fnumK(v)}</td>`;
+      bodyHtml += `<td class="${patternClass}" style="background:${bg};color:${getCellTextColor(v, maxAbs)}">${fnumK(v)}${deltaHtml}</td>`;
     });
     bodyHtml += `</tr>`;
   });
@@ -592,14 +966,15 @@ function startClock() {
 }
 startClock();
 
-// Register service worker for offline support + mobile install
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(() => console.log('[HS] Service worker registered'))
-      .catch(e => console.warn('[HS] SW registration failed:', e));
-  });
-}
+// Sync Voltick patterns button to match persisted state
+(function syncPatternsButton(){
+  const btn = document.getElementById('btn-patterns');
+  if (btn) btn.classList.toggle('patterns-on', showVoltickPatterns);
+})();
+
+// Render tracked-tickers chips from persisted list (if any)
+renderTickerChips();
+if (trackedTickers.length > 0) startChipAgeTimer();
 </script>
 </body>
 </html>
